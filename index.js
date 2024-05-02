@@ -9,6 +9,7 @@ const server = http.createServer(app);
 
 const io = socket(server, { cors: { origin: "*" } });
 let accounts = [];
+let allMessages = [];
 
 io.on("connection", (socket) => {
   socket.on("getPeople", (nothing) => {
@@ -17,7 +18,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("message", (message) => {
-    io.emit("message", message);
+    allMessages.push(message);
+    if (allMessages.length > 100) {
+      allMessages.shift();
+    }
+    io.emit("message", allMessages);
 
     try {
       if (message.user != null) {
@@ -36,10 +41,17 @@ io.on("connection", (socket) => {
 
     let accountobj = accounts.find((account) => account.id == socket.id);
     let username = accountobj.user.FirstName;
-    io.emit("message", {
+    let leftMessage = {
       message: username + " has disconnected!",
       type: "disconnectuser",
-    });
+    };
+
+    allMessages.push(leftMessage);
+    if (allMessages.length > 100) {
+      allMessages.shift();
+    }
+
+    io.emit("message", allMessages);
 
     accounts = accounts.filter((account) => account.id != socket.id);
     io.emit("getPeople", accounts);
